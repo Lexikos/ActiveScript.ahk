@@ -188,7 +188,7 @@ class ActiveScriptSite
 {
     __New(Script)
     {
-        ObjSetCapacity(this, "_site", 2 * A_PtrSize)
+        ObjSetCapacity(this, "_site", 3 * A_PtrSize)
         NumPut(&Script
         , NumPut(ActiveScriptSite._vftable("_vft_w", "31122", 0x100)
         , NumPut(ActiveScriptSite._vftable("_vft", "31125232211", 0)
