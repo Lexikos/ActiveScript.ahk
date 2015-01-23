@@ -39,7 +39,7 @@ Add an object to the global namespace of the script.
 
 If *AddMembers* is true, the object's methods and properties will be added to the script's global namespace instead of the object itself. If omitted, it defaults to *false*.
 
-*DispObj* must be either an object which implements the IDispatch interface, passed either via a ComObject wrapper or by address.
+*DispObj* must be either an object which implements the IDispatch interface, passed either via a ComObject wrapper or by address. Can be an AutoHotkey object if running on AutoHotkey v1.1.17 or later.   
 
 ### Anything else
 
@@ -49,4 +49,6 @@ To call functions or retrieve or set variables defined in the script,  use norma
     value := script.globalvar
     script.globalvar := value
 
-Variables must be declared using Exec() or Eval() before they can be accessed this way.
+New VBScript variables cannot be created this way. New JScript variables can be created this way only on AutoHotkey v1.1.18 and later.
+
+New variables can be created by declaring them in script with Exec() or Eval().
