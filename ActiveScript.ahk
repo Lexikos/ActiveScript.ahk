@@ -21,6 +21,20 @@ class ActiveScript extends ActiveScript._base
         this._objects := {}
         this.Error := ""
         this._dsp := this._GetScriptDispatch()  ; Must be done last.
+        try
+            if this.ScriptEngine() = "JScript"
+                this.SetJScript58()
+    }
+
+    SetJScript58()
+    {
+        static IID_IActiveScriptProperty := "{4954E0D0-FBC7-11D1-8410-006008C3FBFC}"
+        if !prop := ComObjQuery(this._script, IID_IActiveScriptProperty)
+            return false
+        VarSetCapacity(var, 24, 0), NumPut(2, NumPut(3, var, "short") + 6)
+        hr := DllCall(NumGet(NumGet(prop+0)+4*A_PtrSize), "ptr", prop, "uint", 0x4000
+            , "ptr", 0, "ptr", &var), ObjRelease(prop)
+        return hr >= 0
     }
     
     Eval(Code)
