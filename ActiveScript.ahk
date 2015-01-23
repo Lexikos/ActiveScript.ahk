@@ -52,14 +52,19 @@ class ActiveScript extends ActiveScript._base
     
     AddObject(Name, DispObj, AddMembers := false)
     {
+        static a, supports_dispatch ; Test for built-in IDispatch support.
+            := a := ((a:=ComObjArray(0xC,1))[0]:=[42]) && a[0][1]=42
+        if IsObject(DispObj) && !(supports_dispatch || ComObjType(DispObj))
+            throw Exception("Adding a non-COM object requires AutoHotkey v1.1.17+", -1)
         this._objects[Name] := DispObj
         this._AddNamedItem(Name, AddMembers ? 8 : 2)  ; SCRIPTITEM_ISVISIBLE := 2, SCRIPTITEM_GLOBALMEMBERS := 8
     }
     
     _GetObjectUnk(Name)
     {
-        dsp := this._objects[Name]
-        return ComObjValue(dsp) ? ComObjValue(dsp) : dsp
+        return !IsObject(dsp := this._objects[Name]) ? dsp  ; Pointer
+            : ComObjValue(dsp) ? ComObjValue(dsp)  ; ComObject
+            : &dsp  ; AutoHotkey object
     }
     
     class _base
