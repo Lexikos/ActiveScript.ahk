@@ -13,10 +13,10 @@ Save `ActiveScript.ahk` and `JsRT.ahk` (if needed) in a [Lib folder](http://ahks
 Supports JScript, VBScript and possibly other scripting engines which are registered with COM and implement the IActiveScript interface.
 
 ```AutoHotkey
-    #Include <ActiveScript>
+#Include <ActiveScript>
 
-    script := new ActiveScript("JScript")
-    script := new ActiveScript("VBScript")
+script := new ActiveScript("JScript")
+script := new ActiveScript("VBScript")
 ```
 
 More examples are included in the Example\*.ahk files.
@@ -26,11 +26,11 @@ More examples are included in the Example\*.ahk files.
 Supports JavaScript as implemented in IE11 or Edge (Windows 10).
 
 ```AutoHotkey
-	#Include <ActiveScript>
-	#Include <JsRT>
-	
-	script := new JsRT.IE  ; IE11 feature set.
-	script := new JsRT.Edge  ; Edge feature set.
+#Include <ActiveScript>
+#Include <JsRT>
+
+script := new JsRT.IE  ; IE11 feature set.
+script := new JsRT.Edge  ; Edge feature set.
 ```
 
 More examples are included in Example_JsRT.ahk.
@@ -41,19 +41,25 @@ More examples are included in Example_JsRT.ahk.
 
 Evaluate an expression and return the result.
 
-    Result := script.Eval(Code)
+```AutoHotkey
+Result := script.Eval(Code)
+```
 
 ### Exec
 
 Execute script code.
 
-    script.Exec(Code)
+```AutoHotkey
+script.Exec(Code)
+```
 
 ### AddObject
 
 Add an object to the global namespace of the script.
 
-    script.AddObject(Name, DispObj, AddMembers := false)
+```AutoHotkey
+script.AddObject(Name, DispObj, AddMembers := false)
+```
 
 *Name* is required and must be unique.
 
@@ -71,9 +77,11 @@ With AutoHotkey v1.1.17 or later, `script[Name] := DispObj` will usually have th
 
 To call functions or retrieve or set variables defined in the script,  use normal object notation on the ActiveScript object.  For example:
 
-    result := script.MyFunc()
-    value := script.globalvar
-    script.globalvar := value
+```AutoHotkey
+result := script.MyFunc()
+value := script.globalvar
+script.globalvar := value
+```
 
 New VBScript variables cannot be created this way. New JScript variables can be created this way only on AutoHotkey v1.1.18 and later.
 
@@ -82,8 +90,8 @@ New variables can be created by declaring them in script with Exec() or Eval().
 The hosted script can be given access to AutoHotkey functions by using the `Func()` function:
 
 ```AutoHotkey
-    script.alert := Func("alert")
-	alert(message) {
-		MsgBox 48, Message from script, %message%
-	}
+script.alert := Func("alert")
+alert(message) {
+	MsgBox 48, Message from script, %message%
+}
 ```
