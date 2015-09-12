@@ -69,9 +69,10 @@ If *AddMembers* is true, the object's methods and properties will be added to th
 
 Evaluating code with *Eval* or *Exec* may also add global variables and functions.
 
-With AutoHotkey v1.1.17 or later, `script[Name] := DispObj` will usually have the same effect if *AddMembers* is false or omitted.
+With AutoHotkey v1.1.18 or later, `script[Name] := DispObj` will usually have the same effect if *AddMembers* is false or omitted.
 
 **JsRT:** *AddMembers* must be false. *DispObj* can be any value, and will be added as is. Do not pass a pointer, or it will be added as a number.
+
 
 ### Anything else
 
@@ -95,3 +96,10 @@ alert(message) {
 	MsgBox 48, Message from script, %message%
 }
 ```
+
+
+## Error Handling
+
+AutoHotkey has very limited support for propagating exceptions thrown by a JavaScript method; generally the value/object which was thrown is not accessible.  The message format is slightly different depending on whether the method was called directly or via Eval/Exec.
+
+**JsRT:** Exceptions thrown by JavaScript can be caught by AutoHotkey script if the JavaScript was called via Eval/Exec.  Try..catch can also be used to handle compiler/syntax errors.  However, since AutoHotkey doesn't understand JavaScript Error objects, it will display a generic error message if the exception isn't handled.  If a string is thrown from JavaScript, it will be shown as the error message.
