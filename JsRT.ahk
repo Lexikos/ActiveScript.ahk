@@ -38,6 +38,11 @@ class JsRT extends ActiveScript._base
             DllCall("chakra\JsCreateContext", "ptr", runtime, "ptr*", context)
             this._Initialize("chakra", runtime, context)
         }
+        
+        ProjectWinRTNamespace(namespace)
+        {
+            return DllCall("chakra\JsProjectWinRTNamespace", "wstr", namespace)
+        }
     }
     
     _Initialize(dll, runtime, context)
