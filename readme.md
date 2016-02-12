@@ -74,6 +74,21 @@ With AutoHotkey v1.1.18 or later, `script[Name] := DispObj` will usually have th
 **JsRT:** *AddMembers* must be false. *DispObj* can be any value, and will be added as is. Do not pass a pointer, or it will be added as a number.
 
 
+### ProjectWinRTNamespace
+
+**JsRT.Edge only:** "Project" a Windows Runtime (WinRT) namespace -- make it accessible to JavaScript.
+
+```AutoHotkey
+script.ProjectWinRTNamespace(Namespace)
+```
+
+For example, the following is sufficient to make most of the WinRT available to the script:
+
+```AutoHotkey
+script.ProjectWinRTNamespace("Windows")
+```
+
+
 ### Anything else
 
 To call functions or retrieve or set variables defined in the script,  use normal object notation on the ActiveScript object.  For example:
