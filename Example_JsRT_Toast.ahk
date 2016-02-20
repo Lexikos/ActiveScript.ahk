@@ -2,6 +2,9 @@
 #Include ActiveScript.ahk
 #Include JsRT.ahk
 
+; Unlike TrayTip, this API does not require a tray icon:
+#NoTrayIcon
+
 ; Toast notifications from desktop apps can only use local image files.
 if !FileExist("sample.png")
     URLDownloadToFile https://autohotkey.com/boards/styles/simplicity/theme/images/announce_unread.png
@@ -16,9 +19,11 @@ toast_text := ["Hello, world!", "This is the sub-text."]
 
 ; Only the Edge version of JsRT supports WinRT.
 js := new JsRT.Edge
-js.AddObject("alert", Func("alert"))
-alert(s) {
-    MsgBox % s
+js.AddObject("yesno", Func("yesno"))
+yesno(s) {
+    MsgBox 4,, %s%
+    IfMsgBox Yes
+        return true
 }
 
 ; Enable use of WinRT.  "Windows.UI" or "Windows" would also work.
@@ -45,8 +50,12 @@ code =
         // Show the notification.
         var toastNotifier = N.ToastNotificationManager
             .createToastNotifier(app || "AutoHotkey");
-        toastNotifier.show(
-            new N.ToastNotification(toastXml));
+        var notification = new N.ToastNotification(toastXml);
+        toastNotifier.show(notification);
+        // Unlike TrayTip, this API lets us hide the notification:
+        if (yesno("Hide the notification?")) {
+            toastNotifier.hide(notification);
+        }
     }
 )
 try {
@@ -54,12 +63,12 @@ try {
     js.Exec(code)
     ; Show a toast notification.
     js.toast(toast_template, toast_image, toast_text)
-    ; Wait (optional).
-    Sleep 5000
 }
 catch ex {
-    try MsgBox % ex.stack
-    catch
-        MsgBox % ex.message
+    try errmsg := ex.stack
+    if !errmsg
+        errmsg := "Error: " ex.message
+    MsgBox % errmsg
 }
+; Note: If the notification wasn't hidden, it will remain after we exit.
 ExitApp
