@@ -86,10 +86,7 @@ cd0_5: ; IDispatch::GetIDsOfNames
 	status := 0, name := StrGet(NumGet(prm1+0), "UTF-16")
     if !(dispid := this.name_to_id[name])
     {
-        if (A_AhkVersion < "2")
-            this.id_to_name.Insert(name), dispid := this.id_to_name.MaxIndex()
-        else
-            dispid := this.id_to_name.Push(name)
+        dispid := this.id_to_name.Push(name)
         this.name_to_id[name] := dispid
     }
     NumPut(dispid, prm4 + 0, "int")
@@ -121,11 +118,9 @@ cd0_6: ; IDispatch::Invoke
 	,NumPut(nparams, SAhdr, 12+pad+A_PtrSize, "UInt")
 	,params_safearray := ComObject(0x200C, &SAhdr)
 	
-    static ObjPush := Func(A_AhkVersion<"2" ? "ObjInsert":"ObjPush")
-    static ObjPop := Func(A_AhkVersion<"2" ? "ObjRemove":"ObjPop")
 	; Copy the parameters to a regular AutoHotkey array
 	Loop % nparams
-        %ObjPush%(params, params_safearray[idx := nparams - A_Index])
+        ObjPush(params, params_safearray[idx := nparams - A_Index])
     Loop % nparams
     {
         a := params[A_Index]
@@ -135,7 +130,7 @@ cd0_6: ; IDispatch::Invoke
         params[A_Index] := ComDispatch0_Unwrap(a)
     }
     if (prm3 & 12)
-        value := %ObjPop%(params)
+        value := ObjPop(params)
 	
 cd0_call:
 	; Prepare a SAFEARRAY of VARIANT for converting the return value.
@@ -153,9 +148,8 @@ cd0_call:
         }
         else  ; Property
         {
-            static ObjInsertAt := Func(A_AhkVersion<"2" ? "ObjInsert":"ObjInsertAt")
             if (prm0 != 0) ; != DISPID_VALUE
-                %ObjInsertAt%(params, 1, name)
+                ObjInsertAt(params, 1, name)
             retarr[0] := (prm3 & 12)
                 ? ((this.this)[params*] := value)
                 : ((this.this)[params*])
