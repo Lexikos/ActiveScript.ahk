@@ -284,7 +284,7 @@ _ActiveScriptSite(this, a1:=0, a2:=0, a3:=0, a4:=0, a5:=0)
 
 _AS_GUIDToString(pGUID)
 {
-	VarSetCapacity(String, 38*2)
-	DllCall("ole32\StringFromGUID2", "ptr", pGUID, "str", String, "int", 39)
-	return String
+    VarSetCapacity(String, 38*2)
+    DllCall("ole32\StringFromGUID2", "ptr", pGUID, "str", String, "int", 39)
+    return String
 }
