@@ -91,7 +91,7 @@ class ActiveScript extends ActiveScript._base
         {
             if ObjHasKey(this, "_dsp")
             {
-                Value := Params.Remove()
+                Value := Params.Pop()
                 try
                     return (this._dsp)[Property, Params*] := Value
                 catch e
@@ -151,7 +151,7 @@ class ActiveScript extends ActiveScript._base
         if e := this.Error
         {
             this.Error := ""
-            throw Exception("`nError code:`t" this._HRFormat(e.HRESULT) 
+            throw Exception("`nError code:`t" this._HRFormat(e.HRESULT)
                 . "`nSource:`t`t" e.Source "`nDescription:`t" e.Description
                 . "`nLine:`t`t" e.Line "`nColumn:`t`t" e.Column
                 . "`nLine text:`t`t" e.LineText, -3)
@@ -161,12 +161,7 @@ class ActiveScript extends ActiveScript._base
     
     _HRFormat(hr)
     {
-        VarSetCapacity(buf, 20)
-        if A_IsUnicode
-             DllCall("msvcrt\_ultow", "int", hr, "str", buf, "int", 16)
-        else DllCall("msvcrt\_ultoa", "int", hr, "str", buf, "int", 16)
-        StringUpper buf, buf
-        return "0x" buf
+        return Format("0x{1:X}", hr & 0xFFFFFFFF)
     }
     
     _OnScriptError(err) ; IActiveScriptError err
@@ -182,7 +177,7 @@ class ActiveScript extends ActiveScript._base
         hr := wcode ? 0x80040200 + wcode : NumGet(excp, 7 * A_PtrSize, "uint")
         this.Error := {HRESULT: hr, Line: srcline, Column: srccol, LineText: code}
         static Infos := "Source,Description,HelpFile"
-        Loop, Parse, Infos, `,
+        Loop Parse, % Infos, `,
             if pbstr := NumGet(excp, A_Index * A_PtrSize)
                 this.Error[A_LoopField] := StrGet(pbstr, "UTF-16"), DllCall("OleAut32\SysFreeString", "ptr", pbstr)
         return 0x80004001 ; E_NOTIMPL (let Exec/Eval get a fail result)
@@ -220,7 +215,7 @@ class ActiveScriptSite
             return p
         ObjSetCapacity(this, Name, StrLen(PrmCounts) * A_PtrSize)
         p := ObjGetAddress(this, Name)
-        Loop, Parse, PrmCounts
+        Loop Parse, % PrmCounts
         {
             cb := RegisterCallback("_ActiveScriptSite", "F", A_LoopField, A_Index + EIBase)
             NumPut(cb, p + (A_Index-1) * A_PtrSize)
@@ -289,7 +284,7 @@ _ActiveScriptSite(this, a1:=0, a2:=0, a3:=0, a4:=0, a5:=0)
 
 _AS_GUIDToString(pGUID)
 {
-	VarSetCapacity(String, 38*2)
-	DllCall("ole32\StringFromGUID2", "ptr", pGUID, "str", String, "int", 39)
-	return String
+    VarSetCapacity(String, 38*2)
+    DllCall("ole32\StringFromGUID2", "ptr", pGUID, "str", String, "int", 39)
+    return String
 }
