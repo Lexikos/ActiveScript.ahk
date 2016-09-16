@@ -16,7 +16,7 @@ class JsRT extends ActiveScript._base
     {
         __New()
         {
-            if !this._hmod := DllCall("LoadLibrary", "str", "jscript9")
+            if !this._hmod := DllCall("LoadLibrary", "str", "jscript9", "ptr")
                 throw Exception("Failed to load jscript9.dll", -1)
             if DllCall("jscript9\JsCreateRuntime", "int", 0, "int", -1
                 , "ptr", 0, "ptr*", runtime) != 0
@@ -30,7 +30,7 @@ class JsRT extends ActiveScript._base
     {
         __New()
         {
-            if !this._hmod := DllCall("LoadLibrary", "str", "chakra")
+            if !this._hmod := DllCall("LoadLibrary", "str", "chakra", "ptr")
                 throw Exception("Failed to load chakra.dll", -1)
             if DllCall("chakra\JsCreateRuntime", "int", 0
                 , "ptr", 0, "ptr*", runtime) != 0
