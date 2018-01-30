@@ -17,6 +17,17 @@ toast_image := A_ScriptDir "\sample.png"
 ; Text is an array because some templates have multiple text elements.
 toast_text := ["Hello, world!", "This is the sub-text."]
 
+; For Windows 10.0.16299 (and possibly earlier or later versions), the AppID
+; must identify an app which has a shortcut on the Start screen, otherwise
+; the notification won't display.  AppIDs for desktop apps seem to be the
+; path of the executable, with system/known folders replaced with GUIDs.
+; If this doesn't work, the Get-StartApps powershell command can be used to
+; get a list of AppIDs on the system.
+; This assumes AutoHotkey is installed in the default location:
+toast_appid := (A_Is64bitOS ? "{6D809377-6AF0-444b-8957-A3773F02200E}"
+                            : "{905e63b6-c1bf-494e-b29c-65b732d3d21a}")
+    . "\AutoHotkey\AutoHotkey.exe"
+
 ; Only the Edge version of JsRT supports WinRT.
 js := new JsRT.Edge
 js.AddObject("yesno", Func("yesno"))
@@ -62,7 +73,7 @@ try {
     ; Define the toast function.
     js.Exec(code)
     ; Show a toast notification.
-    js.toast(toast_template, toast_image, toast_text)
+    js.toast(toast_template, toast_image, toast_text, toast_appid)
 }
 catch ex {
     try errmsg := ex.stack
