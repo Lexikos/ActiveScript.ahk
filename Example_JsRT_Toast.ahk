@@ -68,10 +68,15 @@ code =
             toastNotifier.hide(notification);
         }
     }
+    function clearAllToasts(app) {
+        Windows.UI.Notifications.ToastNotificationManager.history.clear(app);
+    }
 )
 try {
     ; Define the toast function.
     js.Exec(code)
+    ; Clear all toasts.
+    js.clearAllToasts(toast_appid)
     ; Show a toast notification.
     js.toast(toast_template, toast_image, toast_text, toast_appid)
 }
