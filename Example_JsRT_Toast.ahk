@@ -1,14 +1,12 @@
-#NoEnv
-#Include ActiveScript.ahk
 #Include JsRT.ahk
 
 ; Unlike TrayTip, this API does not require a tray icon:
 #NoTrayIcon
 
 ; Toast notifications from desktop apps can only use local image files.
-if !FileExist("sample.png")
-    URLDownloadToFile https://autohotkey.com/boards/styles/simplicity/theme/images/announce_unread.png
-        , % A_ScriptDir "\sample.png"
+if !FileExist(A_ScriptDir "\sample.png")
+    Download "https://autohotkey.com/boards/styles/simplicity/theme/images/announce_unread.png"
+        , A_ScriptDir "\sample.png"
 ; The templates are described here:
 ;  http://msdn.com/library/windows/apps/windows.ui.notifications.toasttemplatetype.aspx
 toast_template := "toastImageAndText02"
@@ -29,17 +27,12 @@ toast_appid := (A_Is64bitOS ? "{6D809377-6AF0-444b-8957-A3773F02200E}"
     . "\AutoHotkey\AutoHotkey.exe"
 
 ; Only the Edge version of JsRT supports WinRT.
-js := new JsRT.Edge
-js.AddObject("yesno", Func("yesno"))
-yesno(s) {
-    MsgBox 4,, %s%
-    IfMsgBox Yes
-        return true
-}
+js := (JsRT.Edge)()
+js.AddObject "yesno", (s) => MsgBox(s,, "y/n") = "yes"
 
 ; Enable use of WinRT.  "Windows.UI" or "Windows" would also work.
 js.ProjectWinRTNamespace("Windows.UI.Notifications")
-code =
+code := '
 (
     function toast(template, image, text, app) {
         // Alias for convenience.
@@ -54,7 +47,7 @@ code =
                 el.innerText = text;
                 break;
             }
-            el.innerText = text[++i];
+            el.innerText = text(++i);
         }
         toastXml.getElementsByTagName("image")[0]
             .setAttribute("src", image);
@@ -71,7 +64,7 @@ code =
     function clearAllToasts(app) {
         Windows.UI.Notifications.ToastNotificationManager.history.clear(app);
     }
-)
+)'
 try {
     ; Define the toast function.
     js.Exec(code)
@@ -84,7 +77,7 @@ catch ex {
     try errmsg := ex.stack
     if !errmsg
         errmsg := "Error: " ex.message
-    MsgBox % errmsg
+    MsgBox errmsg
 }
 ; Note: If the notification wasn't hidden, it will remain after we exit.
 ExitApp

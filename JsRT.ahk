@@ -1,11 +1,11 @@
 ﻿/*
- *  JsRT for AutoHotkey v1.1
+ *  JsRT for AutoHotkey v2.0-a128
  *
- *  Utilizes the JavaScript engine that comes with IE11.
+ *  Utilizes the JavaScript engine that comes with IE11 or legacy Edge.
  *
  *  License: Use, modify and redistribute without limitation, but at your own risk.
  */
-class JsRT extends ActiveScript._base
+class JsRT
 {
     __New()
     {
@@ -19,9 +19,9 @@ class JsRT extends ActiveScript._base
             if !this._hmod := DllCall("LoadLibrary", "str", "jscript9", "ptr")
                 throw Exception("Failed to load jscript9.dll", -1)
             if DllCall("jscript9\JsCreateRuntime", "int", 0, "int", -1
-                , "ptr", 0, "ptr*", runtime) != 0
+                , "ptr", 0, "ptr*", &runtime:=0) != 0
                 throw Exception("Failed to initialize JsRT", -1)
-            DllCall("jscript9\JsCreateContext", "ptr", runtime, "ptr", 0, "ptr*", context)
+            DllCall("jscript9\JsCreateContext", "ptr", runtime, "ptr", 0, "ptr*", &context:=0)
             this._Initialize("jscript9", runtime, context)
         }
     }
@@ -33,9 +33,9 @@ class JsRT extends ActiveScript._base
             if !this._hmod := DllCall("LoadLibrary", "str", "chakra", "ptr")
                 throw Exception("Failed to load chakra.dll", -1)
             if DllCall("chakra\JsCreateRuntime", "int", 0
-                , "ptr", 0, "ptr*", runtime) != 0
+                , "ptr", 0, "ptr*", &runtime:=0) != 0
                 throw Exception("Failed to initialize JsRT", -1)
-            DllCall("chakra\JsCreateContext", "ptr", runtime, "ptr*", context)
+            DllCall("chakra\JsCreateContext", "ptr", runtime, "ptr*", &context:=0)
             this._Initialize("chakra", runtime, context)
         }
         
@@ -51,8 +51,10 @@ class JsRT extends ActiveScript._base
         this._runtime := runtime
         this._context := context
         DllCall(dll "\JsSetCurrentContext", "ptr", context)
-        DllCall(dll "\JsGetGlobalObject", "ptr*", globalObject)
+        DllCall(dll "\JsGetGlobalObject", "ptr*", &globalObject:=0)
         this._dsp := this._JsToVt(globalObject)
+        for m in ['__Get', '__Call', '__Set']  ; Must be done last.
+            this.%m% := JsRT.Meta.Prototype.%m%
     }
     
     __Delete()
@@ -68,18 +70,16 @@ class JsRT extends ActiveScript._base
     
     _JsToVt(valref)
     {
-        VarSetCapacity(variant, 24, 0)
-        DllCall(this._dll "\JsValueToVariant", "ptr", valref, "ptr", &variant)
-        ref := ComObject(0x400C, &variant), val := ref[], ref[] := 0
-        return val
+        ref := ComObject(0x400C, (var := BufferAlloc(24, 0)).ptr)
+        DllCall(this._dll "\JsValueToVariant", "ptr", valref, "ptr", var)
+        return (val := ref[], ref[] := 0, val)
     }
     
     _ToJs(val)
     {
-        VarSetCapacity(variant, 24, 0)
-        ref := ComObject(0x400C, &variant) ; VT_BYREF|VT_VARIANT
+        ref := ComObject(0x400C, (var := BufferAlloc(24, 0)).ptr)
         ref[] := val
-        DllCall(this._dll "\JsVariantToValue", "ptr", &variant, "ptr*", valref)
+        DllCall(this._dll "\JsVariantToValue", "ptr", var, "ptr*", &valref:=0)
         ref[] := 0
         return valref
     }
@@ -87,10 +87,10 @@ class JsRT extends ActiveScript._base
     _JsEval(code)
     {
         e := DllCall(this._dll "\JsRunScript", "wstr", code, "uptr", 0, "wstr", "source.js"
-            , "ptr*", result)
+            , "ptr*", &result:=0)
         if e
         {
-            if DllCall(this._dll "\JsGetAndClearException", "ptr*", excp) = 0
+            if DllCall(this._dll "\JsGetAndClearException", "ptr*", &excp:=0) = 0
                 throw this._JsToVt(excp)
             throw Exception("JsRT error", -2, format("0x{:X}", e))
         }
@@ -111,6 +111,33 @@ class JsRT extends ActiveScript._base
     {
         if addMembers
             throw Exception("AddMembers=true is not supported", -1)
-        this._dsp[name] := obj
+        this._dsp.%name% := obj
+    }
+    
+    class Meta
+    {
+        __Call(Method, Params)
+        {
+            try
+                return this._dsp.%Method%(Params*)
+            catch e
+                throw Exception(e.Message, -1, e.Extra)
+        }
+        
+        __Get(Property, Params)
+        {
+            try
+                return this._dsp.%Property%[Params*]
+            catch e
+                throw Exception(e.Message, -1, e.Extra)
+        }
+        
+        __Set(Property, Params, Value)
+        {
+            try
+                return this._dsp.%Property%[Params*] := Value
+            catch e
+                throw Exception(e.Message, -1, e.Extra)
+        }
     }
 }

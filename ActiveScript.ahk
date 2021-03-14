@@ -1,5 +1,5 @@
 /*
- *  ActiveScript for AutoHotkey v1.1
+ *  ActiveScript for AutoHotkey v2.0-a128
  *
  *  Provides an interface to Active Scripting languages like VBScript and JScript,
  *  without relying on Microsoft's ScriptControl, which is not available to 64-bit
@@ -7,41 +7,43 @@
  *
  *  License: Use, modify and redistribute without limitation, but at your own risk.
  */
-class ActiveScript extends ActiveScript._base
+class ActiveScript
 {
     __New(Language)
     {
-        if this._script := ComObjCreate(Language, ActiveScript.IID)
-            this._scriptParse := ComObjQuery(this._script, ActiveScript.IID_Parse)
-        if !this._scriptParse
-            throw Exception("Invalid language", -1, Language)
-        this._site := new ActiveScriptSite(this)
+        try {
+            if this._script := ComObjCreate(Language, ActiveScript.IID)
+                this._scriptParse := ComObjQuery(this._script, ActiveScript.IID_Parse)
+        } catch {
+            throw ValueError("Invalid language", -1, Language)
+        }
+        this._site := ActiveScriptSite(this)
         this._SetScriptSite(this._site.ptr)
         this._InitNew()
-        this._objects := {}
+        this._objects := Map()
+        this._objects.CaseSense := false ; Legacy behaviour.
         this.Error := ""
-        this._dsp := this._GetScriptDispatch()  ; Must be done last.
+        this._dsp := this._GetScriptDispatch()
         try
             if this.ScriptEngine() = "JScript"
                 this.SetJScript58()
+        for m in ['__Get', '__Call', '__Set']  ; Must be done last.
+            this.%m% := ActiveScript.Meta.Prototype.%m%
     }
 
     SetJScript58()
     {
         static IID_IActiveScriptProperty := "{4954E0D0-FBC7-11D1-8410-006008C3FBFC}"
-        if !prop := ComObjQuery(this._script, IID_IActiveScriptProperty)
-            return false
-        VarSetCapacity(var, 24, 0), NumPut(2, NumPut(3, var, "short") + 6)
-        hr := DllCall(NumGet(NumGet(prop+0)+4*A_PtrSize), "ptr", prop, "uint", 0x4000
-            , "ptr", 0, "ptr", &var), ObjRelease(prop)
-        return hr >= 0
+        prop := ComObjQuery(this._script, IID_IActiveScriptProperty)
+        NumPut 'int64', 3, 'int64', 2, var := BufferAlloc(24)
+        ComCall 4, prop, "uint", 0x4000, "ptr", 0, "ptr", &var
     }
     
     Eval(Code)
     {
-        pvar := NumGet(ComObjValue(arr:=ComObjArray(0xC,1)) + 8+A_PtrSize)
-        this._ParseScriptText(Code, 0x20, pvar)  ; SCRIPTTEXT_ISEXPRESSION := 0x20
-        return arr[0]
+        ref := ComObject(0x400C, (var := BufferAlloc(24, 0)).ptr)
+        this._ParseScriptText(Code, 0x20, var)  ; SCRIPTTEXT_ISEXPRESSION := 0x20
+        return (val := ref[], ref[] := 0, val)
     }
     
     Exec(Code)
@@ -52,10 +54,6 @@ class ActiveScript extends ActiveScript._base
     
     AddObject(Name, DispObj, AddMembers := false)
     {
-        static a, supports_dispatch ; Test for built-in IDispatch support.
-            := a := ((a:=ComObjArray(0xC,1))[0]:=[42]) && a[0][1]=42
-        if IsObject(DispObj) && !(supports_dispatch || ComObjType(DispObj))
-            throw Exception("Adding a non-COM object requires AutoHotkey v1.1.17+", -1)
         this._objects[Name] := DispObj
         this._AddNamedItem(Name, AddMembers ? 8 : 2)  ; SCRIPTITEM_ISVISIBLE := 2, SCRIPTITEM_GLOBALMEMBERS := 8
     }
@@ -63,135 +61,101 @@ class ActiveScript extends ActiveScript._base
     _GetObjectUnk(Name)
     {
         return !IsObject(dsp := this._objects[Name]) ? dsp  ; Pointer
-            : ComObjValue(dsp) ? ComObjValue(dsp)  ; ComObject
-            : &dsp  ; AutoHotkey object
+            : ComObjType(dsp) ? ComObjValue(dsp)  ; ComObject
+            : ObjPtr(dsp)  ; AutoHotkey object
     }
     
-    class _base
+    class Meta
     {
-        __Call(Method, Params*)
+        __Call(Method, Params)
         {
-            if ObjHasKey(this, "_dsp")
-                try
-                    return (this._dsp)[Method](Params*)
-                catch e
-                    throw Exception(e.Message, -1, e.Extra)
+            try
+                return this._dsp.%Method%(Params*)
+            catch e
+                throw Exception(e.Message, -1, e.Extra)
         }
         
-        __Get(Property, Params*)
+        __Get(Property, Params)
         {
-            if ObjHasKey(this, "_dsp")
-                try
-                    return (this._dsp)[Property, Params*]
-                catch e
-                    throw Exception(e.Message, -1, e.Extra)
+            try
+                return this._dsp.%Property%[Params*]
+            catch e
+                throw Exception(e.Message, -1, e.Extra)
         }
         
-        __Set(Property, Params*)
+        __Set(Property, Params, Value)
         {
-            if ObjHasKey(this, "_dsp")
-            {
-                Value := Params.Pop()
-                try
-                    return (this._dsp)[Property, Params*] := Value
-                catch e
-                    throw Exception(e.Message, -1, e.Extra)
-            }
+            try
+                return this._dsp.%Property%[Params*] := Value
+            catch e
+                throw Exception(e.Message, -1, e.Extra)
         }
     }
     
     _SetScriptSite(Site)
     {
-        hr := DllCall(NumGet(NumGet((p:=this._script)+0)+3*A_PtrSize), "ptr", p, "ptr", Site)
-        if (hr < 0)
-            this._HRFail(hr, "IActiveScript::SetScriptSite")
+        ; IActiveScript::SetScriptSite
+        ComCall 3, this._script, "ptr", Site
     }
     
     _SetScriptState(State)
     {
-        hr := DllCall(NumGet(NumGet((p:=this._script)+0)+5*A_PtrSize), "ptr", p, "int", State)
-        if (hr < 0)
-            this._HRFail(hr, "IActiveScript::SetScriptState")
+        ; IActiveScript::SetScriptState
+        ComCall 5, this._script, "int", State
     }
     
     _AddNamedItem(Name, Flags)
     {
-        hr := DllCall(NumGet(NumGet((p:=this._script)+0)+8*A_PtrSize), "ptr", p, "wstr", Name, "uint", Flags)
-        if (hr < 0)
-            this._HRFail(hr, "IActiveScript::AddNamedItem")
+        ; IActiveScript::AddNamedItem
+        ComCall 8, this._script, "wstr", Name, "uint", Flags
     }
     
     _GetScriptDispatch()
     {
-        hr := DllCall(NumGet(NumGet((p:=this._script)+0)+10*A_PtrSize), "ptr", p, "ptr", 0, "ptr*", pdsp)
-        if (hr < 0)
-            this._HRFail(hr, "IActiveScript::GetScriptDispatch")
+        ; IActiveScript::GetScriptDispatch
+        ComCall 10, this._script, "ptr", 0, "ptr*", &pdsp := 0
         return ComObject(9, pdsp, 1)
     }
     
     _InitNew()
     {
-        hr := DllCall(NumGet(NumGet((p:=this._scriptParse)+0)+3*A_PtrSize), "ptr", p)
-        if (hr < 0)
-            this._HRFail(hr, "IActiveScriptParse::InitNew")
+        ; IActiveScriptParse::InitNew
+        ComCall 3, this._scriptParse
     }
     
     _ParseScriptText(Code, Flags, pvarResult)
     {
-        VarSetCapacity(excp, 8 * A_PtrSize, 0)
-        hr := DllCall(NumGet(NumGet((p:=this._scriptParse)+0)+5*A_PtrSize), "ptr", p
+        excp := BufferAlloc(8 * A_PtrSize, 0)
+        ; IActiveScriptParse::ParseScriptText
+        ComCall 5, this._scriptParse
             , "wstr", Code, "ptr", 0, "ptr", 0, "ptr", 0, "uptr", 0, "uint", 1
-            , "uint", Flags, "ptr", pvarResult, "ptr", 0)
-        if (hr < 0)
-            this._HRFail(hr, "IActiveScriptParse::ParseScriptText")
-    }
-    
-    _HRFail(hr, what)
-    {
-        if e := this.Error
-        {
-            this.Error := ""
-            throw Exception("`nError code:`t" this._HRFormat(e.HRESULT)
-                . "`nSource:`t`t" e.Source "`nDescription:`t" e.Description
-                . "`nLine:`t`t" e.Line "`nColumn:`t`t" e.Column
-                . "`nLine text:`t`t" e.LineText, -3)
-        }
-        throw Exception(what " failed with code " this._HRFormat(hr), -2)
-    }
-    
-    _HRFormat(hr)
-    {
-        return Format("0x{1:X}", hr & 0xFFFFFFFF)
+            , "uint", Flags, "ptr", pvarResult, "ptr", 0
     }
     
     _OnScriptError(err) ; IActiveScriptError err
     {
-        VarSetCapacity(excp, 8 * A_PtrSize, 0)
-        DllCall(NumGet(NumGet(err+0)+3*A_PtrSize), "ptr", err, "ptr", &excp) ; GetExceptionInfo
-        DllCall(NumGet(NumGet(err+0)+4*A_PtrSize), "ptr", err, "uint*", srcctx, "uint*", srcline, "int*", srccol) ; GetSourcePosition
-        DllCall(NumGet(NumGet(err+0)+5*A_PtrSize), "ptr", err, "ptr*", pbstrcode) ; GetSourceLineText
+        excp := BufferAlloc(8 * A_PtrSize, 0)
+        ComCall 3, "ptr", excp ; GetExceptionInfo
+        ComCall 4, "uint*", &srcctx := 0, "uint*", &srcline := 0, "int*", &srccol := 0 ; GetSourcePosition
+        ComCall 5, "ptr*", &pbstrcode := 0 ; GetSourceLineText
         code := StrGet(pbstrcode, "UTF-16"), DllCall("OleAut32\SysFreeString", "ptr", pbstrcode)
-        if fn := NumGet(excp, 6 * A_PtrSize) ; pfnDeferredFillIn
-            DllCall(fn, "ptr", &excp)
+        if fn := NumGet(excp, 6 * A_PtrSize, "ptr") ; pfnDeferredFillIn
+            DllCall fn, "ptr", excp
         wcode := NumGet(excp, 0, "ushort")
         hr := wcode ? 0x80040200 + wcode : NumGet(excp, 7 * A_PtrSize, "uint")
         this.Error := {HRESULT: hr, Line: srcline, Column: srccol, LineText: code}
         static Infos := "Source,Description,HelpFile"
-        Loop Parse, % Infos, `,
-            if pbstr := NumGet(excp, A_Index * A_PtrSize)
-                this.Error[A_LoopField] := StrGet(pbstr, "UTF-16"), DllCall("OleAut32\SysFreeString", "ptr", pbstr)
+        Loop Parse Infos, ','
+        for info in ['Source', 'Description', 'HelpFile']
+            if pbstr := NumGet(excp, A_Index * A_PtrSize, "ptr")
+                this.Error.%info% := StrGet(pbstr, "UTF-16"), DllCall("OleAut32\SysFreeString", "ptr", pbstr)
         return 0x80004001 ; E_NOTIMPL (let Exec/Eval get a fail result)
     }
     
     __Delete()
     {
         if this._script
-        {
-            DllCall(NumGet(NumGet((p:=this._script)+0)+7*A_PtrSize), "ptr", p)  ; Close
-            ObjRelease(this._script)
-        }
-        if this._scriptParse
-            ObjRelease(this._scriptParse)
+            ComCall 7, this._script  ; Close
     }
     
     static IID := "{BB1A2AE1-A4F9-11cf-8F20-00805F2CD064}"
@@ -202,77 +166,72 @@ class ActiveScriptSite
 {
     __New(Script)
     {
-        ObjSetCapacity(this, "_site", 3 * A_PtrSize)
-        NumPut(&Script
-        , NumPut(ActiveScriptSite._vftable("_vft_w", "31122", 0x100)
-        , NumPut(ActiveScriptSite._vftable("_vft", "31125232211", 0)
-            , this.ptr := ObjGetAddress(this, "_site"))))
-    }
-    
-    _vftable(Name, PrmCounts, EIBase)
-    {
-        if p := ObjGetAddress(this, Name)
-            return p
-        ObjSetCapacity(this, Name, StrLen(PrmCounts) * A_PtrSize)
-        p := ObjGetAddress(this, Name)
-        Loop Parse, % PrmCounts
+        _vftable(PrmCounts, EIBase)
         {
-            cb := RegisterCallback("_ActiveScriptSite", "F", A_LoopField, A_Index + EIBase)
-            NumPut(cb, p + (A_Index-1) * A_PtrSize)
+            buf := BufferAlloc(StrLen(PrmCounts) * A_PtrSize)
+            Loop Parse PrmCounts
+            {
+                cb := CallbackCreate(_ActiveScriptSite.Bind(A_Index + EIBase), "F", A_LoopField)
+                NumPut 'ptr', cb, buf, (A_Index-1) * A_PtrSize
+            }
+            return buf
         }
-        return p
+        
+        static vft := _vftable("31125232211", 0)
+        static vft_w := _vftable("31122", 0x100)
+        
+        NumPut 'ptr', vft.ptr, 'ptr', vft_w.ptr, 'ptr', ObjPtr(Script)
+            , this.ptr := BufferAlloc(3 * A_PtrSize)
     }
 }
 
-_ActiveScriptSite(this, a1:=0, a2:=0, a3:=0, a4:=0, a5:=0)
+_ActiveScriptSite(index, this, a1:=0, a2:=0, a3:=0, a4:=0, a5:=0)
 {
-    Method := A_EventInfo & 0xFF
-    if A_EventInfo >= 0x100  ; IActiveScriptSiteWindow
+    if index >= 0x100  ; IActiveScriptSiteWindow
     {
-        if Method = 4  ; GetWindow
+        index -= 0x100
+        switch index
         {
-            NumPut(0, a1+0) ; *phwnd := 0
+        case 4:  ; GetWindow
+            NumPut 'ptr', 0, a1 ; *phwnd := 0
             return 0 ; S_OK
-        }
-        if Method = 5  ; EnableModeless
-        {
+        case 5:  ; EnableModeless
             return 0 ; S_OK
         }
         this -= A_PtrSize     ; Cast to IActiveScriptSite
     }
     ;else: IActiveScriptSite
-    if Method = 1  ; QueryInterface
+    switch index
     {
+    case 1:  ; QueryInterface
         iid := _AS_GUIDToString(a1)
         if (iid = "{00000000-0000-0000-C000-000000000046}"  ; IUnknown
          || iid = "{DB01A1E3-A42B-11cf-8F20-00805F2CD064}") ; IActiveScriptSite
         {
-            NumPut(this, a2+0)
+            NumPut 'ptr', this, a2
             return 0 ; S_OK
         }
         if (iid = "{D10F6761-83E9-11cf-8F20-00805F2CD064}") ; IActiveScriptSiteWindow
         {
-            NumPut(this + A_PtrSize, a2+0)
+            NumPut 'ptr', this + A_PtrSize, a2
             return 0 ; S_OK
         }
-        NumPut(0, a2+0)
+        NumPut 'ptr', 0, a2
         return 0x80004002 ; E_NOINTERFACE
-    }
-    if Method = 5  ; GetItemInfo
-    {
+    case 5:  ; GetItemInfo
         a1 := StrGet(a1, "UTF-16")
-        , (a3 && NumPut(0, a3+0))  ; *ppiunkItem := NULL
-        , (a4 && NumPut(0, a4+0))  ; *ppti := NULL
+        , (a3 && NumPut('ptr', 0, a3))  ; *ppiunkItem := NULL
+        , (a4 && NumPut('ptr', 0, a4))  ; *ppti := NULL
         if (a2 & 1) ; SCRIPTINFO_IUNKNOWN
         {
-            if !(unk := Object(NumGet(this + A_PtrSize*2))._GetObjectUnk(a1))
+            if !(unk := ObjFromPtrAddRef(NumGet(this + A_PtrSize*2, 'ptr'))._GetObjectUnk(a1))
                 return 0x8002802B ; TYPE_E_ELEMENTNOTFOUND
-            ObjAddRef(unk), NumPut(unk, a3+0)
+            ObjAddRef(unk), NumPut('ptr', unk, a3)
         }
         return 0 ; S_OK
+    case 9:  ; OnScriptError
+        return ObjFromPtrAddRef(NumGet(this + A_PtrSize*2, 'ptr'))._OnScriptError(a1)
     }
-    if Method = 9  ; OnScriptError
-        return Object(NumGet(this + A_PtrSize*2))._OnScriptError(a1)
     
     ; AddRef and Release don't do anything because we want to avoid circular references.
     ; The site and IActiveScript are both released when the AHK script releases its last
@@ -284,7 +243,7 @@ _ActiveScriptSite(this, a1:=0, a2:=0, a3:=0, a4:=0, a5:=0)
 
 _AS_GUIDToString(pGUID)
 {
-    VarSetCapacity(String, 38*2)
-    DllCall("ole32\StringFromGUID2", "ptr", pGUID, "str", String, "int", 39)
-    return String
+    VarSetStrCapacity(&sGuid, 38)
+    DllCall("ole32\StringFromGUID2", "ptr", pGUID, "str", &sGuid, "int", 39)
+    return sGuid
 }

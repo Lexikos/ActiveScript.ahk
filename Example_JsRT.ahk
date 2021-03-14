@@ -1,44 +1,38 @@
-#NoEnv
-#Include ActiveScript.ahk
 #Include JsRT.ahk
 /* Preferred usage:
-      ; Put ActiveScript.ahk and JsRT.ahk in a Lib folder, then:
-      #Include <ActiveScript>
+      ; Put JsRT.ahk in a Lib folder, then:
       #Include <JsRT>
  */
 
-MsgBox 4,, Use Edge version of JsRT?
-IfMsgBox Yes
-    js := new JsRT.Edge
+if MsgBox("Use Edge version of JsRT?",, "y/n") = "yes"
+    js := (JsRT.Edge)()
 else
-    js := new JsRT.IE
+    js := (JsRT.IE)()
 
-code =
+js.Exec '
 (
-function ToJS(v) {
-    MsgBox("JScript says foo is " + v.foo);
-    ToAHK(v);
-    return v;
-}
-)
-js.Exec(code)
+    function ToJS(v) {
+        MsgBox("JScript says foo is " + v.foo);
+        ToAHK(v);
+        return v;
+    }
+)'
 
 ; Add functions callable by name:
-js.AddObject("MsgBox", Func("MyMsgBox"))
-js.AddObject("ToAHK", Func("ToAHK"))
+js.AddObject "MsgBox", MyMsgBox
+js.AddObject "ToAHK", ToAHK
 
 ; Pass an AutoHotkey object to a JScript function:
 theirObj := js.ToJS(myObj := {foo: "bar"})
 
 ; ...and check the object it returned to us.
-MsgBox % "ToJS returned " (myObj=theirObj ? "the original":"a different") " object and foo is " theirObj.foo
+MsgBox "ToJS returned " (myObj=theirObj ? "the original":"a different") " object and foo is " theirObj.foo
 
 
 ToAHK(v) {
-    global myObj
-    MsgBox 0, ToAHK, % "ToAHK got " (myObj=v ? "the original":"a different") " object and foo is " v.foo
+    MsgBox "ToAHK got " (myObj=v ? "the original":"a different") " object and foo is " v.foo, "ToAHK"
 }
 
 MyMsgBox(s) {
-    MsgBox 0, JScript, %s%
+    MsgBox s, "JsRT"
 }
