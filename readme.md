@@ -1,12 +1,14 @@
-# ActiveScript for AutoHotkey v1.1
+# ActiveScript for AutoHotkey v2.0-a128
 
 Scripts for hosting other scripting languages; specifically:
   - Active Scripting languages such as VBScript and JScript (without relying on Microsoft's ScriptControl, which is not available to 64-bit programs).
   - JavaScript as implemented in IE11 and Edge.
 
-This branch contains scripts for AutoHotkey v1.1 which are intended to mimic Microsoft's ScriptControl. As such, the feature set might be more limited than what the underlying API actually allows.
+This branch contains scripts which are intended to mimic Microsoft's ScriptControl. As such, the feature set might be more limited than what the underlying API actually allows.
 
 **License:** Use, modify and redistribute without limitation, but at your own risk.
+
+This branch is compatible with AutoHotkey v2.0-a128 and some later versions. For AutoHotkey v1.1, get the `for-v1` branch.
 
 ## Usage
 
@@ -19,8 +21,8 @@ Supports JScript, VBScript and possibly other scripting engines which are regist
 ```AutoHotkey
 #Include <ActiveScript>
 
-script := new ActiveScript("JScript")
-script := new ActiveScript("VBScript")
+script := ActiveScript("JScript")
+script := ActiveScript("VBScript")
 ```
 
 More examples are included in the Example\*.ahk files.
@@ -30,14 +32,13 @@ More examples are included in the Example\*.ahk files.
 Supports JavaScript as implemented in IE11 or Edge (Windows 10).
 
 ```AutoHotkey
-#Include <ActiveScript>
 #Include <JsRT>
 
-script := new JsRT.IE  ; IE11 feature set.
-script := new JsRT.Edge  ; Edge feature set.
+script := (JsRT.IE)()  ; IE11 feature set.
+script := (JsRT.Edge)()  ; Edge feature set.
 ```
 
-This version of the library requires both files.
+This version of the library is self-contained within JsRT.ahk; it does not require ActiveScript.ahk.
 
 More examples are included in Example\_JsRT.ahk.
 
@@ -71,11 +72,11 @@ script.AddObject(Name, DispObj, AddMembers := false)
 
 If *AddMembers* is true, the object's methods and properties will be added to the script's global namespace instead of the object itself. If omitted, it defaults to *false*.
 
-*DispObj* must be an object which implements the IDispatch interface, passed either via a ComObject wrapper or by address. Can be an AutoHotkey object if running on AutoHotkey v1.1.17 or later.
+*DispObj* must be either an object or an interface pointer for an object which implements IDispatch. Can be an AutoHotkey object (reference or address). If it is a ComObject, the interface pointer it contains is used.
 
 Evaluating code with *Eval* or *Exec* may also add global variables and functions.
 
-With AutoHotkey v1.1.18 or later, `script[Name] := DispObj` will usually have the same effect if *AddMembers* is false or omitted.
+`script[Name] := DispObj` will usually have the same effect if *AddMembers* is false or omitted.
 
 **JsRT:** *AddMembers* must be false. *DispObj* can be any value, and will be added as is. Do not pass a pointer, or it will be added as a number.
 
@@ -109,12 +110,12 @@ New VBScript variables cannot be created this way. New JScript variables can be 
 
 New variables can be created by declaring them in script with Exec() or Eval().
 
-The hosted script can be given access to AutoHotkey functions by using the `Func()` function:
+The hosted script can be given access to AutoHotkey functions by assigning them to global variables:
 
 ```AutoHotkey
-script.alert := Func("alert")
+script.alert := alert
 alert(message) {
-	MsgBox 48, Message from script, %message%
+	MsgBox message, "Message from script", "Icon!"
 }
 ```
 
