@@ -1,6 +1,10 @@
 # ActiveScript for AutoHotkey v1.1
 
-Provides an interface to Active Scripting languages like VBScript and JScript, without relying on Microsoft's ScriptControl, which is not available to 64-bit programs.
+Scripts for hosting other scripting languages; specifically:
+  - Active Scripting languages such as VBScript and JScript (without relying on Microsoft's ScriptControl, which is not available to 64-bit programs).
+  - JavaScript as implemented in IE11 and Edge.
+
+This branch contains scripts for AutoHotkey v1.1 which are intended to mimic Microsoft's ScriptControl. As such, the feature set might be more limited than what the underlying API actually allows.
 
 **License:** Use, modify and redistribute without limitation, but at your own risk.
 
@@ -33,7 +37,9 @@ script := new JsRT.IE  ; IE11 feature set.
 script := new JsRT.Edge  ; Edge feature set.
 ```
 
-More examples are included in Example_JsRT.ahk.
+This version of the library requires both files.
+
+More examples are included in Example\_JsRT.ahk.
 
 ## Methods
 
@@ -65,7 +71,7 @@ script.AddObject(Name, DispObj, AddMembers := false)
 
 If *AddMembers* is true, the object's methods and properties will be added to the script's global namespace instead of the object itself. If omitted, it defaults to *false*.
 
-*DispObj* must be either an object which implements the IDispatch interface, passed either via a ComObject wrapper or by address. Can be an AutoHotkey object if running on AutoHotkey v1.1.17 or later.
+*DispObj* must be an object which implements the IDispatch interface, passed either via a ComObject wrapper or by address. Can be an AutoHotkey object if running on AutoHotkey v1.1.17 or later.
 
 Evaluating code with *Eval* or *Exec* may also add global variables and functions.
 
