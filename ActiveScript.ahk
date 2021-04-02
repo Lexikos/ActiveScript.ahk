@@ -100,8 +100,10 @@ class ActiveScript
     
     _SetScriptState(State)
     {
-        ; IActiveScript::SetScriptState
-        ComCall 5, this._script, "int", State
+        try ; IActiveScript::SetScriptState
+            ComCall 5, this._script, "int", State
+        catch err
+            this._Rethrow err
     }
     
     _AddNamedItem(Name, Flags)
@@ -125,37 +127,63 @@ class ActiveScript
     
     _ParseScriptText(Code, Flags, pvarResult)
     {
-        excp := BufferAlloc(8 * A_PtrSize, 0)
-        ; IActiveScriptParse::ParseScriptText
-        ComCall 5, this._scriptParse
-            , "wstr", Code, "ptr", 0, "ptr", 0, "ptr", 0, "uptr", 0, "uint", 1
-            , "uint", Flags, "ptr", pvarResult, "ptr", 0
+        try ; IActiveScriptParse::ParseScriptText
+            ComCall 5, this._scriptParse
+                , "wstr", Code, "ptr", 0, "ptr", 0, "ptr", 0, "uptr", 0, "uint", 1
+                , "uint", Flags, "ptr", pvarResult, "ptr", 0
+        catch err
+            this._Rethrow err
+    }
+    
+    _Rethrow(err)
+    {
+        ; If _OnScriptError was called, the error information was stored in this.Error.
+        throw this.HasOwnProp('Error') ? this.DeleteProp('Error') : err
     }
     
     _OnScriptError(err) ; IActiveScriptError err
     {
         excp := BufferAlloc(8 * A_PtrSize, 0)
-        ComCall 3, "ptr", excp ; GetExceptionInfo
-        ComCall 4, "uint*", &srcctx := 0, "uint*", &srcline := 0, "int*", &srccol := 0 ; GetSourcePosition
-        ComCall 5, "ptr*", &pbstrcode := 0 ; GetSourceLineText
-        code := StrGet(pbstrcode, "UTF-16"), DllCall("OleAut32\SysFreeString", "ptr", pbstrcode)
+        ComCall 3, err, "ptr", excp ; GetExceptionInfo
+        ComCall 4, err, "uint*", &srcctx := 0, "uint*", &srcline := 0, "int*", &srccol := 0 ; GetSourcePosition
+        ; Seems to always throw "unspecified error":
+        ; ComCall 5, err, "ptr*", &pbstrcode := 0 ; GetSourceLineText
+        ; code := StrGet(pbstrcode, "UTF-16"), DllCall("OleAut32\SysFreeString", "ptr", pbstrcode)
         if fn := NumGet(excp, 6 * A_PtrSize, "ptr") ; pfnDeferredFillIn
             DllCall fn, "ptr", excp
         wcode := NumGet(excp, 0, "ushort")
         hr := wcode ? 0x80040200 + wcode : NumGet(excp, 7 * A_PtrSize, "uint")
-        this.Error := {HRESULT: hr, Line: srcline, Column: srccol, LineText: code}
-        static Infos := "Source,Description,HelpFile"
-        Loop Parse Infos, ','
-        for info in ['Source', 'Description', 'HelpFile']
+        this.Error := e := (ActiveScript.Error)()
+        for field in ['What', 'Message', 'File']
             if pbstr := NumGet(excp, A_Index * A_PtrSize, "ptr")
-                this.Error.%info% := StrGet(pbstr, "UTF-16"), DllCall("OleAut32\SysFreeString", "ptr", pbstr)
-        return 0x80004001 ; E_NOTIMPL (let Exec/Eval get a fail result)
+                e.%field% := StrGet(pbstr, "UTF-16"), DllCall("OleAut32\SysFreeString", "ptr", pbstr)
+            else
+                e.%field% := ""
+        switch e.File
+        {
+        case "", A_LineFile:
+            e.File := "<Eval>", e.Line := srcline ; Won't affect error dialogs, but might be used by script.
+        default:
+            e.Line := NumGet(excp, 4 * A_PtrSize, "uint") ; dwHelpContext is set by built-in IDispatch support.
+        }
+        e.Message := Format("`nError code:`t0x{:x}`nSource:`t`t{}`nDescription:`t{}`nLine:`t`t{}`nColumn:`t`t{}"
+            , hr, e.What, e.Message, srcline, srccol)
+        ; Returning any failure code results in 0x80020009 (DISP_E_EXCEPTION),
+        ; whereas returning 0 (S_OK) results in 0x80020101 (SCRIPT_E_REPORTED)
+        ; for _ParseScriptText and 0 (S_OK) for _SetScriptState.  Return failure
+        ; so we don't need to check for this.Error after successful execution.
+        return 0x80020009
     }
     
     __Delete()
     {
         if this._script
             ComCall 7, this._script  ; Close
+    }
+    
+    class Error extends Error
+    {
+        __New() => this  ; Override the default constructor.
     }
     
     static IID := "{BB1A2AE1-A4F9-11cf-8F20-00805F2CD064}"
