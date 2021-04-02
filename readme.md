@@ -4,7 +4,7 @@ Scripts for hosting other scripting languages; specifically:
   - Active Scripting languages such as VBScript and JScript (without relying on Microsoft's ScriptControl, which is not available to 64-bit programs).
   - JavaScript as implemented in IE11 and Edge.
 
-This branch contains scripts which are intended to mimic Microsoft's ScriptControl. As such, the feature set might be more limited than what the underlying API actually allows.
+This branch contains scripts which are intended to mimic Microsoft's ScriptControl. As such, the feature set might be more limited than what the underlying API actually allows. An alternative wrapper for JsRT can be found in  [AutoHotkey-jk](https://github.com/Lexikos/AutoHotkey-jk).
 
 **License:** Use, modify and redistribute without limitation, but at your own risk.
 
