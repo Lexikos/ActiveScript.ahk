@@ -73,7 +73,7 @@ try {
     ; Show a toast notification.
     js.toast(toast_template, toast_image, toast_text, toast_appid)
 }
-catch ex {
+catch as ex {
     try errmsg := ex.stack
     if !errmsg
         errmsg := "Error: " ex.message

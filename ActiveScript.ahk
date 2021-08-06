@@ -12,7 +12,7 @@ class ActiveScript
     __New(Language)
     {
         try {
-            if this._script := ComObjCreate(Language, ActiveScript.IID)
+            if this._script := ComObject(Language, ActiveScript.IID)
                 this._scriptParse := ComObjQuery(this._script, ActiveScript.IID_Parse)
         } catch {
             throw ValueError("Invalid language", -1, Language)
@@ -35,13 +35,13 @@ class ActiveScript
     {
         static IID_IActiveScriptProperty := "{4954E0D0-FBC7-11D1-8410-006008C3FBFC}"
         prop := ComObjQuery(this._script, IID_IActiveScriptProperty)
-        NumPut 'int64', 3, 'int64', 2, var := BufferAlloc(24)
+        NumPut 'int64', 3, 'int64', 2, var := Buffer(24)
         ComCall 4, prop, "uint", 0x4000, "ptr", 0, "ptr", &var
     }
     
     Eval(Code)
     {
-        ref := ComObject(0x400C, (var := BufferAlloc(24, 0)).ptr)
+        ref := ComValue(0x400C, (var := Buffer(24, 0)).ptr)
         this._ParseScriptText(Code, 0x20, var)  ; SCRIPTTEXT_ISEXPRESSION := 0x20
         return (val := ref[], ref[] := 0, val)
     }
@@ -71,24 +71,24 @@ class ActiveScript
         {
             try
                 return this._dsp.%Method%(Params*)
-            catch e
-                throw Exception(e.Message, -1, e.Extra)
+            catch as e
+                throw Error(e.Message, -1, e.Extra)
         }
         
         __Get(Property, Params)
         {
             try
                 return this._dsp.%Property%[Params*]
-            catch e
-                throw Exception(e.Message, -1, e.Extra)
+            catch as e
+                throw Error(e.Message, -1, e.Extra)
         }
         
         __Set(Property, Params, Value)
         {
             try
                 return this._dsp.%Property%[Params*] := Value
-            catch e
-                throw Exception(e.Message, -1, e.Extra)
+            catch as e
+                throw Error(e.Message, -1, e.Extra)
         }
     }
     
@@ -102,7 +102,7 @@ class ActiveScript
     {
         try ; IActiveScript::SetScriptState
             ComCall 5, this._script, "int", State
-        catch err
+        catch as err
             this._Rethrow err
     }
     
@@ -116,7 +116,7 @@ class ActiveScript
     {
         ; IActiveScript::GetScriptDispatch
         ComCall 10, this._script, "ptr", 0, "ptr*", &pdsp := 0
-        return ComObject(9, pdsp, 1)
+        return ComObjFromPtr(pdsp)
     }
     
     _InitNew()
@@ -131,7 +131,7 @@ class ActiveScript
             ComCall 5, this._scriptParse
                 , "wstr", Code, "ptr", 0, "ptr", 0, "ptr", 0, "uptr", 0, "uint", 1
                 , "uint", Flags, "ptr", pvarResult, "ptr", 0
-        catch err
+        catch as err
             this._Rethrow err
     }
     
@@ -143,7 +143,7 @@ class ActiveScript
     
     _OnScriptError(err) ; IActiveScriptError err
     {
-        excp := BufferAlloc(8 * A_PtrSize, 0)
+        excp := Buffer(8 * A_PtrSize, 0)
         ComCall 3, err, "ptr", excp ; GetExceptionInfo
         ComCall 4, err, "uint*", &srcctx := 0, "uint*", &srcline := 0, "int*", &srccol := 0 ; GetSourcePosition
         ; Seems to always throw "unspecified error":
@@ -196,7 +196,7 @@ class ActiveScriptSite
     {
         _vftable(PrmCounts, EIBase)
         {
-            buf := BufferAlloc(StrLen(PrmCounts) * A_PtrSize)
+            buf := Buffer(StrLen(PrmCounts) * A_PtrSize)
             Loop Parse PrmCounts
             {
                 cb := CallbackCreate(_ActiveScriptSite.Bind(A_Index + EIBase), "F", A_LoopField)
@@ -209,7 +209,7 @@ class ActiveScriptSite
         static vft_w := _vftable("31122", 0x100)
         
         NumPut 'ptr', vft.ptr, 'ptr', vft_w.ptr, 'ptr', ObjPtr(Script)
-            , this.ptr := BufferAlloc(3 * A_PtrSize)
+            , this.ptr := Buffer(3 * A_PtrSize)
     }
 }
 

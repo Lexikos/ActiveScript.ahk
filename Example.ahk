@@ -45,6 +45,6 @@ ShowVersion(js)
 js := ActiveScript("{16d51579-a30b-4c8b-a276-0ff4dc41e755}")
 ShowVersion(js)
 
-ShowVersion(as) {
-    MsgBox as.ScriptEngineMajorVersion() "." as.ScriptEngineMinorVersion()
+ShowVersion(scr) {
+    MsgBox scr.ScriptEngineMajorVersion() "." scr.ScriptEngineMinorVersion()
 }
