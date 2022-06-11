@@ -1,4 +1,4 @@
-# ActiveScript for AutoHotkey v2.0-a128
+# ActiveScript for AutoHotkey v2.0-beta.1
 
 Scripts for hosting other scripting languages; specifically:
   - Active Scripting languages such as VBScript and JScript (without relying on Microsoft's ScriptControl, which is not available to 64-bit programs).
@@ -8,7 +8,7 @@ This branch contains scripts which are intended to mimic Microsoft's ScriptContr
 
 **License:** Use, modify and redistribute without limitation, but at your own risk.
 
-This branch is compatible with AutoHotkey v2.0-a128 and some later versions. For AutoHotkey v1.1, get the `for-v1` branch.
+This branch is compatible with AutoHotkey v2.0-beta.1 and probably later versions. For AutoHotkey v1.1, get the `for-v1` branch.
 
 ## Usage
 
