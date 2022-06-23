@@ -34,9 +34,11 @@ Supports JavaScript as implemented in IE11 or Edge (Windows 10).
 ```AutoHotkey
 #Include <JsRT>
 
-script := (JsRT.IE)()  ; IE11 feature set.
-script := (JsRT.Edge)()  ; Edge feature set.
+script := JsRT.IE()  ; IE11 feature set.
+script := JsRT.Edge()  ; Edge feature set.
 ```
+
+Use either `IE` or `Edge`. Loading both runtimes into the same process is unsupported by Microsoft, and attempting it generally causes the process to crash. WebBrowser ActiveX controls and MSHTML use the IE runtime, and therefore must not be used in the same process as `JsRT.Edge()`.
 
 This version of the library is self-contained within JsRT.ahk; it does not require ActiveScript.ahk.
 
