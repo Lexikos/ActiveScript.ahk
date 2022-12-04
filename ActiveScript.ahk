@@ -123,7 +123,7 @@ class ActiveScript extends ActiveScript._base
     
     _GetScriptDispatch()
     {
-        hr := DllCall(NumGet(NumGet((p:=this._script)+0)+10*A_PtrSize), "ptr", p, "ptr", 0, "ptr*", pdsp)
+        hr := DllCall(NumGet(NumGet((p:=this._script)+0)+10*A_PtrSize), "ptr", p, "ptr", 0, "ptr*", pdsp:=0)
         if (hr < 0)
             this._HRFail(hr, "IActiveScript::GetScriptDispatch")
         return ComObject(9, pdsp, 1)
@@ -169,7 +169,7 @@ class ActiveScript extends ActiveScript._base
         VarSetCapacity(excp, 8 * A_PtrSize, 0)
         DllCall(NumGet(NumGet(err+0)+3*A_PtrSize), "ptr", err, "ptr", &excp) ; GetExceptionInfo
         DllCall(NumGet(NumGet(err+0)+4*A_PtrSize), "ptr", err, "uint*", srcctx, "uint*", srcline, "int*", srccol) ; GetSourcePosition
-        DllCall(NumGet(NumGet(err+0)+5*A_PtrSize), "ptr", err, "ptr*", pbstrcode) ; GetSourceLineText
+        DllCall(NumGet(NumGet(err+0)+5*A_PtrSize), "ptr", err, "ptr*", pbstrcode:=0) ; GetSourceLineText
         code := StrGet(pbstrcode, "UTF-16"), DllCall("OleAut32\SysFreeString", "ptr", pbstrcode)
         if fn := NumGet(excp, 6 * A_PtrSize) ; pfnDeferredFillIn
             DllCall(fn, "ptr", &excp)

@@ -19,9 +19,9 @@ class JsRT extends ActiveScript._base
             if !this._hmod := DllCall("LoadLibrary", "str", "jscript9", "ptr")
                 throw Exception("Failed to load jscript9.dll", -1)
             if DllCall("jscript9\JsCreateRuntime", "int", 0, "int", -1
-                , "ptr", 0, "ptr*", runtime) != 0
+                , "ptr", 0, "ptr*", runtime:=0) != 0
                 throw Exception("Failed to initialize JsRT", -1)
-            DllCall("jscript9\JsCreateContext", "ptr", runtime, "ptr", 0, "ptr*", context)
+            DllCall("jscript9\JsCreateContext", "ptr", runtime, "ptr", 0, "ptr*", context:=0)
             this._Initialize("jscript9", runtime, context)
         }
     }
@@ -33,9 +33,9 @@ class JsRT extends ActiveScript._base
             if !this._hmod := DllCall("LoadLibrary", "str", "chakra", "ptr")
                 throw Exception("Failed to load chakra.dll", -1)
             if DllCall("chakra\JsCreateRuntime", "int", 0
-                , "ptr", 0, "ptr*", runtime) != 0
+                , "ptr", 0, "ptr*", runtime:=0) != 0
                 throw Exception("Failed to initialize JsRT", -1)
-            DllCall("chakra\JsCreateContext", "ptr", runtime, "ptr*", context)
+            DllCall("chakra\JsCreateContext", "ptr", runtime, "ptr*", context:=0)
             this._Initialize("chakra", runtime, context)
         }
         
@@ -51,7 +51,7 @@ class JsRT extends ActiveScript._base
         this._runtime := runtime
         this._context := context
         DllCall(dll "\JsSetCurrentContext", "ptr", context)
-        DllCall(dll "\JsGetGlobalObject", "ptr*", globalObject)
+        DllCall(dll "\JsGetGlobalObject", "ptr*", globalObject:=0)
         this._dsp := this._JsToVt(globalObject)
     }
     
@@ -79,7 +79,7 @@ class JsRT extends ActiveScript._base
         VarSetCapacity(variant, 24, 0)
         ref := ComObject(0x400C, &variant) ; VT_BYREF|VT_VARIANT
         ref[] := val
-        DllCall(this._dll "\JsVariantToValue", "ptr", &variant, "ptr*", valref)
+        DllCall(this._dll "\JsVariantToValue", "ptr", &variant, "ptr*", valref:=0)
         ref[] := 0
         return valref
     }
@@ -87,10 +87,10 @@ class JsRT extends ActiveScript._base
     _JsEval(code)
     {
         e := DllCall(this._dll "\JsRunScript", "wstr", code, "uptr", 0, "wstr", "source.js"
-            , "ptr*", result)
+            , "ptr*", result:=0)
         if e
         {
-            if DllCall(this._dll "\JsGetAndClearException", "ptr*", excp) = 0
+            if DllCall(this._dll "\JsGetAndClearException", "ptr*", excp:=0) = 0
                 throw this._JsToVt(excp)
             throw Exception("JsRT error", -2, format("0x{:X}", e))
         }
