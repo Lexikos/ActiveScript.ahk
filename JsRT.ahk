@@ -1,5 +1,5 @@
 ﻿/*
- *  JsRT for AutoHotkey v2.0-a128
+ *  JsRT for AutoHotkey v2.0
  *
  *  Utilizes the JavaScript engine that comes with IE11 or legacy Edge.
  *

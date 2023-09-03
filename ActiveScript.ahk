@@ -1,5 +1,5 @@
 /*
- *  ActiveScript for AutoHotkey v2.0-a128
+ *  ActiveScript for AutoHotkey v2.0
  *
  *  Provides an interface to Active Scripting languages like VBScript and JScript,
  *  without relying on Microsoft's ScriptControl, which is not available to 64-bit
