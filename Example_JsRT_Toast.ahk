@@ -3,14 +3,10 @@
 ; Unlike TrayTip, this API does not require a tray icon:
 #NoTrayIcon
 
-; Toast notifications from desktop apps can only use local image files.
-if !FileExist(A_ScriptDir "\sample.png")
-    Download "https://autohotkey.com/boards/styles/simplicity/theme/images/announce_unread.png"
-        , A_ScriptDir "\sample.png"
 ; The templates are described here:
 ;  http://msdn.com/library/windows/apps/windows.ui.notifications.toasttemplatetype.aspx
 toast_template := "toastImageAndText02"
-; Image path/URL must be absolute, not relative.
+; Image path/URL must be absolute, not relative, and must be a local file.
 toast_image := A_ScriptDir "\sample.png"
 ; Text is an array because some templates have multiple text elements.
 toast_text := ["Hello, world!", "This is the sub-text."]
